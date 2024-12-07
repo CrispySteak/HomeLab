@@ -1,0 +1,97 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: calibre
+    namespace: calibre
+spec:
+    interval: 15m
+    chart:
+        spec:
+            chart: calibre
+            version: 15.2.3
+            sourceRef:
+                kind: HelmRepository
+                name: truecharts
+                namespace: flux-system
+    releaseName: calibre
+    values:
+        TZ: "${TZ}"
+        addons:
+            codeserver:
+                enabled: false
+            netshoot:
+                enabled: false
+            vpn:
+                type: disabled
+        credentials:
+            backblaze:
+                accessKey: "${S3ID}"
+                bucket: "${S3PREFIX}"
+                encrKey: "${S3ENCR}"
+                name: backblaze
+                path: ""
+                secretKey: "${S3KEY}"
+                type: s3
+                url: "${S3url}"
+        ingress:
+            main:
+                enabled: false
+            webserver:
+                enabled: false
+                targetSelector:
+                    webserver: webserver
+        persistence:
+            config:
+                enabled: true
+                mountPath: /config
+                readOnly: false
+                storageClass: ""
+                volsync:
+                    - credentials: backblaze
+                      dest:
+                        enabled: false
+                      name: config
+                      src:
+                        enabled: true
+                      type: restic
+        release_name: calibre
+        resources: {}
+        securityContext:
+            container:
+                UMASK: "0022"
+                readOnlyRootFilesystem: false
+                runAsGroup: 0
+                runAsNonRoot: false
+                runAsUser: 0
+            pod:
+                fsGroupChangePolicy: OnRootMismatch
+        service:
+            main:
+                enabled: true
+                loadBalancerIP: ""
+                ports:
+                    main:
+                        port: 8084
+                        protocol: http
+                        targetPort: 8080
+                type: LoadBalancer
+            webserver:
+                enabled: true
+                loadBalancerIP: ""
+                ports:
+                    webserver:
+                        enabled: true
+                        port: 8081
+                        protocol: http
+                        targetPort: 8081
+                type: LoadBalancer
+        workload:
+            main:
+                podSpec:
+                    containers:
+                        main:
+                            env:
+                                CLI_ARGS: ""
+                                PASSWORD: ""
+                replicas: 1
+                type: Deployment

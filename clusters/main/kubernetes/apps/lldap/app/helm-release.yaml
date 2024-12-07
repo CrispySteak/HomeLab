@@ -1,0 +1,163 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: lldap
+    namespace: lldap
+spec:
+    interval: 15m
+    chart:
+        spec:
+            chart: lldap
+            version: 6.0.9
+            sourceRef:
+                kind: HelmRepository
+                name: truecharts
+                namespace: flux-system
+    releaseName: lldap
+    values:
+        TZ: "${TZ}"
+        addons:
+            codeserver:
+                enabled: false
+            netshoot:
+                enabled: false
+            vpn:
+                type: disabled
+        cnpg:
+            main:
+                backups:
+                    enabled: false
+                    revision: ""
+                cluster:
+                    instances: 2
+                    singleNode: true
+                database: lldap
+                enabled: true
+                hibernate: false
+                mode: standalone
+                monitoring:
+                    disableDefaultQueries: false
+                    enablePodMonitor: true
+                password: "${LLDAP_PG_PW}"
+                pgVersion: 16
+                pooler:
+                    enabled: false
+                recovery:
+                    enabled: false
+                    revision: ""
+                    serverName: ""
+                user: lldap
+        credentials:
+            backblaze:
+                accessKey: "${S3ID}"
+                bucket: "${S3PREFIX}"
+                encrKey: "${S3ENCR}"
+                name: backblaze
+                path: ""
+                secretKey: "${S3KEY}"
+                type: s3
+                url: "${S3url}"
+        ingress:
+            main:
+                enabled: true
+                hosts:
+                    - host: "lldap.${DOMAIN_0}"
+                      paths:
+                        - path: /
+                          pathType: Prefix
+                ingressClassName: ""
+                integrations:
+                    certManager:
+                        certificateIssuer: domain
+                        enabled: true
+                    homepage:
+                        description: ""
+                        enabled: true
+                        group: Core
+                        icon: ""
+                        name: ""
+                        widget:
+                            custom:
+                                key: ""
+                            enabled: true
+                    traefik:
+                        allowCors: false
+                        enabled: true
+                        entrypoints:
+                            - websecure
+        persistence:
+            data:
+                enabled: true
+                mountPath: /data
+                readOnly: false
+                storageClass: ""
+                volsync:
+                    - credentials: backblaze
+                      dest:
+                        enabled: false
+                      name: config
+                      src:
+                        enabled: true
+                      type: restic
+        release_name: lldap
+        resources: {}
+        securityContext:
+            container:
+                UMASK: "0022"
+                readOnlyRootFilesystem: false
+                runAsGroup: 568
+                runAsUser: 568
+            pod:
+                fsGroupChangePolicy: OnRootMismatch
+        service:
+            ldap:
+                enabled: true
+                ports:
+                    ldap:
+                        enabled: true
+                        port: 3890
+                type: ClusterIP
+            main:
+                enabled: true
+                ports:
+                    main:
+                        port: 17170
+                type: ClusterIP
+        workload:
+            main:
+                podSpec:
+                    containers:
+                        main:
+                            args:
+                                - run
+                            command:
+                                - /app/lldap
+                            env:
+                                LLDAP_HTTP_PORT: '{{ .Values.service.main.ports.main.port }}'
+                                LLDAP_HTTP_URL: "https://lldap.${DOMAIN_0}"
+                                LLDAP_JWT_SECRET:
+                                    - secretRef:
+                                        key: LLDAP_JWT_SECRET
+                                        name: secrets
+                                LLDAP_LDAP_BASE_DN: "${LDAP_BASE_DN}"
+                                LLDAP_LDAP_PORT: '{{ .Values.service.ldap.ports.ldap.port }}'
+                                LLDAP_LDAP_USER_DN: "${LDAP_USER_DN}"
+                                LLDAP_LDAP_USER_EMAIL: "${DOMAIN_0_EMAIL}"
+                                LLDAP_LDAP_USER_PASS: <b=FHQd&@M7z$_xY&_Z4
+                                LLDAP_SMTP_OPTIONS__ENABLE_PASSWORD_RESET: false
+                                LLDAP_SMTP_OPTIONS__FROM: LLDAP Admin <sender@gmail.com>
+                                LLDAP_SMTP_OPTIONS__PASSWORD: ""
+                                LLDAP_SMTP_OPTIONS__PORT: 587
+                                LLDAP_SMTP_OPTIONS__REPLY_TO: Do not reply <noreply@localhost>
+                                LLDAP_SMTP_OPTIONS__SERVER: ""
+                                LLDAP_SMTP_OPTIONS__SMTP_ENCRYPTION: STARTTLS
+                                LLDAP_SMTP_OPTIONS__USER: ""
+                                LLDAP_VERBOSE: false
+                                LLDAP_database_url:
+                                    secretKeyRef:
+                                        key: std
+                                        name: cnpg-main-urls
+                                LLDAP_key_file: /data/private_key
+                                smtp: false
+                replicas: 1
+                type: Deployment

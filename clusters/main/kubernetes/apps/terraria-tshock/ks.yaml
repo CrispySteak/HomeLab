@@ -1,0 +1,13 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: terraria-tshock
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: clusters/main/kubernetes/apps/terraria-tshock/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+

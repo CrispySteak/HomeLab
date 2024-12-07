@@ -1,0 +1,137 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: syncthing
+    namespace: syncthing
+spec:
+    interval: 15m
+    chart:
+        spec:
+            chart: syncthing
+            version: 19.0.9
+            sourceRef:
+                kind: HelmRepository
+                name: truecharts
+                namespace: flux-system
+    releaseName: syncthing
+    values:
+        TZ: "${TZ}"
+        addons:
+            codeserver:
+                enabled: false
+            netshoot:
+                enabled: false
+            vpn:
+                type: disabled
+        credentials:
+            backblaze:
+                accessKey: "${S3ID}"
+                bucket: "${S3PREFIX}"
+                encrKey: "${S3ENCR}"
+                name: backblaze
+                path: ""
+                secretKey: "${S3KEY}"
+                type: s3
+                url: "${S3url}"
+        ingress:
+            main:
+                enabled: true
+                hosts:
+                    - host: "syncthing.${DOMAIN_0}"
+                      paths:
+                        - path: /
+                          pathType: Prefix
+                ingressClassName: ""
+                integrations:
+                    certManager:
+                        certificateIssuer: domain
+                        enabled: true
+                    homepage:
+                        description: ""
+                        enabled: true
+                        group: Infra
+                        icon: ""
+                        name: ""
+                        widget:
+                            custom:
+                                key: ""
+                            enabled: true
+                    traefik:
+                        allowCors: false
+                        enabled: true
+                        entrypoints:
+                            - websecure
+        persistence:
+            config:
+                enabled: true
+                mountPath: /var/syncthing
+                readOnly: false
+                storageClass: ""
+                volsync:
+                    - credentials: backblaze
+                      dest:
+                        enabled: false
+                      name: config
+                      src:
+                        enabled: true
+                      type: restic
+        release_name: syncthing
+        resources: {}
+        securityContext:
+            container:
+                UMASK: "0022"
+                runAsGroup: 568
+                runAsUser: 568
+            pod:
+                fsGroupChangePolicy: OnRootMismatch
+        service:
+            discovery:
+                enabled: true
+                ports:
+                    discovery:
+                        enabled: true
+                        port: 21027
+                        protocol: udp
+                        targetPort: 21027
+                type: ClusterIP
+            listeners:
+                enabled: true
+                loadBalancerIP: ""
+                ports:
+                    tcp:
+                        enabled: true
+                        port: 22000
+                        targetPort: 22000
+                type: LoadBalancer
+            listeners-udp:
+                enabled: true
+                loadBalancerIP: ""
+                ports:
+                    udp:
+                        enabled: true
+                        port: 22000
+                        protocol: udp
+                        targetPort: 22000
+                type: LoadBalancer
+            main:
+                enabled: true
+                loadBalancerIP: ""
+                ports:
+                    main:
+                        port: 8384
+                        targetPort: 8384
+                type: LoadBalancer
+        workload:
+            main:
+                podSpec:
+                    containers:
+                        main:
+                            probes:
+                                liveness:
+                                    path: /rest/noauth/health
+                                readiness:
+                                    path: /rest/noauth/health
+                                startup:
+                                    path: /rest/noauth/health
+                replicas: 1
+                type: Deployment

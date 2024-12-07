@@ -1,0 +1,169 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: qbittorrent
+    namespace: qbittorrent
+spec:
+    interval: 15m
+    chart:
+        spec:
+            chart: qbittorrent
+            version: 20.0.11
+            sourceRef:
+                kind: HelmRepository
+                name: truecharts
+                namespace: flux-system
+    releaseName: qbittorrent
+    values:
+        TZ: "${TZ}"
+        addons:
+            codeserver:
+                enabled: false
+            netshoot:
+                enabled: false
+            vpn:
+                configFile: ""
+                env:
+                    VPN_ENDPOINT_IP:
+                        name: VPN_ENDPOINT_IP
+                        value: "${QBITORRENT_VPN_ENDPOINT_IP}"
+                    VPN_ENDPOINT_PORT:
+                        name: VPN_ENDPOINT_PORT
+                        value: "${QBITORRENT_VPN_ENDPOINT_PORT}"
+                    VPN_PORT_FORWARDING:
+                        name: VPN_PORT_FORWARDING
+                        value: "on"
+                    VPN_PORT_FORWARDING_PROVIDER:
+                        name: VPN_PORT_FORWARDING_PROVIDER
+                        value: protonvpn
+                    VPN_SERVICE_PROVIDER:
+                        name: VPN_SERVICE_PROVIDER
+                        value: custom
+                    VPN_TYPE:
+                        name: VPN_TYPE
+                        value: wireguard
+                    WIREGUARD_ADDRESSES:
+                        name: WIREGUARD_ADDRESSES
+                        value: 10.2.0.2/32
+                    WIREGUARD_PRIVATE_KEY:
+                        name: WIREGUARD_PRIVATE_KEY
+                        value: "${QBITORRENT_WIREGUARD_PRIVATE_KEY}"
+                    WIREGUARD_PUBLIC_KEY:
+                        name: WIREGUARD_PUBLIC_KEY
+                        value: "${QBITORRENT_WIREGUARD_PUBLIC_KEY}"
+                excludedNetworks_IPv4:
+                    - 172.16.0.0/16
+                    - 192.168.1.0/24
+                killSwitch: true
+                type: gluetun
+        credentials:
+            backblaze:
+                accessKey: "${S3ID}"
+                bucket: "${S3PREFIX}"
+                encrKey: "${S3ENCR}"
+                name: backblaze
+                path: ""
+                secretKey: "${S3KEY}"
+                type: s3
+                url: "${S3url}"
+        ingress:
+            main:
+                enabled: false
+        persistence:
+            config:
+                enabled: true
+                mountPath: /config
+                readOnly: false
+                storageClass: ""
+                volsync:
+                    - credentials: backblaze
+                      dest:
+                        enabled: false
+                      name: config
+                      src:
+                        enabled: true
+                      type: restic
+        qbitportforward:
+            QBT_PASSWORD: "${QBT_PASSWORD}"
+            QBT_USERNAME: "${QBT_USERNAME}"
+            enabled: true
+        qbitportforwardImage:
+            pullPolicy: IfNotPresent
+            repository: mjmeli/qbittorrent-port-forward-gluetun-server
+            tag: latest@sha256:67d0d21ed792cf80716d4211e7162b6d375af5c12f3cf096c9032ad705dddaa8
+        release_name: qbittorrent
+        resources: {}
+        securityContext:
+            container:
+                UMASK: "0022"
+                readOnlyRootFilesystem: false
+                runAsGroup: 568
+                runAsUser: 568
+            pod:
+                fsGroupChangePolicy: OnRootMismatch
+        service:
+            gluetun:
+                enabled: true
+                ports:
+                    gluetun:
+                        enabled: true
+                        port: 8000
+                        protocol: http
+                        targetPort: 8000
+                type: ClusterIP
+            main:
+                enabled: true
+                loadBalancerIP: ""
+                ports:
+                    main:
+                        port: 10095
+                type: LoadBalancer
+            torrent:
+                enabled: true
+                loadBalancerIP: ""
+                ports:
+                    torrent:
+                        enabled: true
+                        port: 6881
+                        protocol: tcp
+                    torrentudp:
+                        enabled: true
+                        port: '{{ .Values.service.torrent.ports.torrent.port }}'
+                        protocol: udp
+                type: LoadBalancer
+        workload:
+            main:
+                podSpec:
+                    containers:
+                        main:
+                            env:
+                                QBITTORRENT__PORT: '{{ .Values.service.main.ports.main.port }}'
+                                QBT_BitTorrent__Session__Port: '{{ .Values.service.torrent.ports.torrent.port }}'
+                                QBT_Preferences__Connection__PortRangeMin: '{{ .Values.service.torrent.ports.torrent.port }}'
+                                QBT_Preferences__WebUI__Address: '*'
+                replicas: 1
+                type: Deployment
+            qbitportforward:
+                enabled: true
+                podSpec:
+                    containers:
+                        qbitportforward:
+                            command: /usr/src/app/main.sh
+                            enabled: true
+                            env:
+                                GTN_ADDR: '{{ printf "http://%v-gluetun:8000" (include "tc.v1.common.lib.chart.names.fullname" $) }}'
+                                QBT_ADDR: '{{ printf "http://%v:%v" (include "tc.v1.common.lib.chart.names.fullname" $) .Values.service.main.ports.main.port }}'
+                                QBT_PASSWORD: '{{ .Values.qbitportforward.QBT_PASSWORD }}'
+                                QBT_USERNAME: '{{ .Values.qbitportforward.QBT_USERNAME }}'
+                            imageSelector: qbitportforwardImage
+                            primary: true
+                            probes:
+                                liveness:
+                                    enabled: false
+                                readiness:
+                                    enabled: false
+                                startup:
+                                    enabled: false
+                    restartPolicy: OnFailure
+                schedule: '*/5 * * * *'
+                type: CronJob
