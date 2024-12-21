@@ -4,7 +4,6 @@ resources:
   - calibre/ks.yaml
   - calibre-web/ks.yaml
   - cloudflareddns/ks.yaml
-  - cloudnative-pg/ks.yaml
   - flaresolverr/ks.yaml
   - homepage/ks.yaml
   - jellyfin/ks.yaml
