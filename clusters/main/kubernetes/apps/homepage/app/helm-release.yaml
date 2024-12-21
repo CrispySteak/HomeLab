@@ -116,8 +116,8 @@ spec:
                         entrypoints:
                             - websecure
                         middlewares:
-                            - name: ipwhitelist
-                              namespace: ""
+                            - name: local
+                              namespace: "traefik"
         persistence:
             bookmarks-config:
                 enabled: '{{ not .Values.forceConfigFromValues }}'

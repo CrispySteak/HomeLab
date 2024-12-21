@@ -39,14 +39,10 @@ spec:
       tcp:
         loadBalancerIP: ${TRAEFIK_IP}
     middlewares:
-        ipWhite:
-            ipwhitelist:
-                ipStrategy:
-                    depth: 0
-                name: ipwhitelist
-                sourceRange:
-                    - 192.168.1.0/24
-                    - 192.168.1.187
-                    - 127.0.0.1/32
-                    - 172.16.0.0/16
-                    - 172.17.0.0/16
+      ipWhiteList:
+        - name: local
+          sourceRange:
+            - 172.16.0.0/16
+            - 172.17.0.0/16
+            - 192.168.1.0/24
+            - 192.168.2.0/24
