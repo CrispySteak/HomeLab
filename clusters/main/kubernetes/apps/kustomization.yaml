@@ -1,25 +1,19 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - blocky/ks.yaml
   - calibre/ks.yaml
   - calibre-web/ks.yaml
-  - cert-manager/ks.yaml
   - cloudflareddns/ks.yaml
   - cloudnative-pg/ks.yaml
-  - clusterissuer/ks.yaml
   - flaresolverr/ks.yaml
   - homepage/ks.yaml
   - jellyfin/ks.yaml
   - kubernetes-dashboard/ks.yaml
-  - kubernetes-reflector/ks.yaml
   - lidarr/ks.yaml
   - lldap/ks.yaml
   - navidrome/ks.yaml
-  - openebs/ks.yaml
   - peanut/ks.yaml
   - pgadmin/ks.yaml
-  - prometheus-operator/ks.yaml
   - prowlarr/ks.yaml
   - qbittorrent/ks.yaml
   - radarr/ks.yaml
@@ -27,5 +21,3 @@ resources:
   - syncthing/ks.yaml
   - tachidesk-docker/ks.yaml
   - terraria-tshock/ks.yaml
-  - traefik/ks.yaml
-  - volsync/ks.yaml
