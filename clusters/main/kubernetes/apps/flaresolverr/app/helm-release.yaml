@@ -45,7 +45,7 @@ spec:
                 volsync:
                     - credentials: backblaze
                       dest:
-                        enabled: false
+                        enabled: true
                       name: config
                       src:
                         enabled: true
