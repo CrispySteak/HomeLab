@@ -3,7 +3,7 @@
   "extends": [
     "config:recommended",
     "github>truecharts/public//.github/renovate/main.json5",
-    "github>Crispy_Steak/HomeLab//.github/renovate/special_talos.json5",
-    "github>Crispy_Steak/HomeLab//.github/renovate/major_dashboardapproval_disable.json5"
+    "github>CrispySteak/HomeLab//.github/renovate/special_talos.json5",
+    "github>CrispySteak/HomeLab//.github/renovate/major_dashboardapproval_disable.json5"
   ]
 }
