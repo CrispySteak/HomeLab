@@ -8,7 +8,7 @@ spec:
     chart:
         spec:
             chart: tachidesk-docker
-            version: 7.0.12
+            version: 8.3.1
             sourceRef:
                 kind: HelmRepository
                 name: truecharts
